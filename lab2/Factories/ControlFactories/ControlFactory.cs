@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Windows.Forms;
-using lab2.hierarchy;
+using lab2.vehicles;
 
 namespace lab2.Factories.ControlFactories
 {
@@ -16,6 +16,11 @@ namespace lab2.Factories.ControlFactories
             binding.DataSourceUpdateMode = DataSourceUpdateMode.OnValidation;
             binding.ReadValue();
             control.DataBindings.Add(binding);
+        }
+
+        public virtual bool CanCreate(Type propertyType)
+        {
+            return false;
         }
 
         public virtual void BindToObject(Control control, object obj, PropertyInfo property) { }

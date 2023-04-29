@@ -23,5 +23,10 @@ namespace lab2.Factories.ControlFactories
         {
             Bind(control, obj, property.Name, "Value");
         }
+
+        public override bool CanCreate(Type propertyType)
+        {
+            return propertyType == typeof(int);
+        }
     }
 }

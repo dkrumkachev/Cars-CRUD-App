@@ -1,4 +1,6 @@
-using lab2.hierarchy;
+using lab2.Factories.SerializerFactories;
+using lab2.vehicles;
+using lab2.Serializers;
 using System;
 using System.ComponentModel;
 using System.Reflection;
@@ -12,15 +14,26 @@ namespace lab2
         private List<Vehicle> vehicles = new List<Vehicle>();
         public static Type[] VehiclesTypes = {};
 
+        public enum SerializationType
+        {
+            [DisplayName("Text files|*.txt")]
+            Text,
+            [DisplayName("XML files|*.xml")]
+            XML,
+            [DisplayName("Binary files|*.bin")]
+            Binary,
+        }
+        private string filesFilter = string.Empty;
+        private Dictionary<SerializationType, Type> serializerFactories = new Dictionary<SerializationType, Type>()
+        {
+            { SerializationType.Binary, typeof(BinarySerializerFactory) },
+            { SerializationType.XML, typeof(XMLSerializerFactory) },
+            { SerializationType.Text, typeof(TextSerializerFactory) },
+        }; 
+
+
         private void HardcodeVehiclesToTable()
         {
-            Bicycle bicycle = new Bicycle();
-            bicycle.Manufacturer = "AIST";
-            bicycle.Model = "NT-200";
-            bicycle.WheelsDiameter = 20;
-            bicycle.Driver.Age = 14;
-            bicycle.Driver.Name = "Charlie";
-            bicycle.Type = Bicycle.BikeTypes.City;
             Motorcycle motorcycle = new Motorcycle();
             motorcycle.Manufacturer = "Yamaha";
             motorcycle.Model = "YFZ";
@@ -56,18 +69,8 @@ namespace lab2
             passengerCar.Driver.Name = "Alice";
             passengerCar.Drivetrain = PassengerCar.Drivetrains.RearWheel;
             passengerCar.BodyStyle = PassengerCar.BodyStyles.Hatchback;
-            passengerCar.HasSeatHeating = true;
-            PassengerCar passengerCar1 = new PassengerCar();
-            passengerCar1.Manufacturer = "Audi";
-            passengerCar1.Model = "A4";
-            passengerCar1.Engine.FuelType = Engine.FuelTypes.Gasoline;
-            passengerCar1.Engine.Horsepower = 130;
-            passengerCar1.Driver.Age = 40;
-            passengerCar1.Driver.Name = "Bob";
-            passengerCar1.Drivetrain = PassengerCar.Drivetrains.FrontWheel;
-            passengerCar1.BodyStyle = PassengerCar.BodyStyles.Sedan;
-            passengerCar1.HasSeatHeating = true;
-            vehicles.AddRange(new List<Vehicle> { bicycle, bus, motorcycle, passengerCar1, truck, passengerCar});
+            passengerCar.HasSeatHeating = true; 
+            vehicles.AddRange(new List<Vehicle> { bus, motorcycle, truck, passengerCar});
         }
 
         public MainForm()
@@ -77,6 +80,7 @@ namespace lab2
                 t.IsDefined(typeof(DisplayNameAttribute))).ToArray();
             HardcodeVehiclesToTable();
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            filesFilter = GetFilesFilter();
         }
 
         private void UpdateTable()
@@ -94,12 +98,6 @@ namespace lab2
             }
         }
 
-        private Vehicle GetSelectedItem()
-        {
-            int index = (int)dataGridView.SelectedRows[0].Cells[0].Value;
-            return vehicles[index];
-        }
-
         private void addButton_Click(object sender, EventArgs e)
         {
             AddForm addForm = new AddForm(AddForm.Mode.Add);
@@ -109,13 +107,6 @@ namespace lab2
                 vehicles.Add(addForm.Vehicle);
                 UpdateTable();
             }
-        }
-
-        private void viewButton_Click(object sender, EventArgs e)
-        {
-            AddForm addForm = new AddForm(AddForm.Mode.View, GetSelectedItem());
-            addForm.ShowDialog();
-            UpdateTable();
         }
 
         private void editButton_Click(object sender, EventArgs e)
@@ -136,13 +127,11 @@ namespace lab2
             {
                 editButton.Enabled = false;
                 removeButton.Enabled = false;
-                viewButton.Enabled = false;
             }
             else
             {
                 editButton.Enabled = true;
                 removeButton.Enabled = true;
-                viewButton.Enabled = true;
             }
         }
 
@@ -160,6 +149,61 @@ namespace lab2
         private void MainForm_Shown(object sender, EventArgs e)
         {
             UpdateTable();
+        }
+
+        private static string GetFilesFilter()
+        {
+            var fileFilter = string.Empty;
+            var serializationTypes = typeof(SerializationType).GetFields();
+            foreach (var serializationType in serializationTypes)
+            {
+                var name = DisplayNameAttribute.GetDisplayName(serializationType);
+                if (name != string.Empty)
+                {
+                    fileFilter += name + "|";
+                }
+            }
+            return fileFilter.Remove(fileFilter.Length - 1);    
+        }
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            saveFileDialog1.Filter = filesFilter;
+            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                var serializationType = (SerializationType)(saveFileDialog1.FilterIndex - 1);
+                var obj = Activator.CreateInstance(serializerFactories[serializationType]);
+                if (obj != null)
+                {
+                    var serializerFactory = (SerializerFactory)obj;
+                    ISerializer serializer = serializerFactory.CreateSerializer();
+                    serializer.Serialize(saveFileDialog1.FileName, vehicles);
+                }
+            }
+        }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            openFileDialog1.Filter = filesFilter;
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                var serializationType = (SerializationType)(openFileDialog1.FilterIndex - 1);
+                var obj = Activator.CreateInstance(serializerFactories[serializationType]);
+                if (obj != null)
+                {
+                    var serializerFactory = (SerializerFactory)obj;
+                    ISerializer serializer = serializerFactory.CreateSerializer();
+                    try
+                    {
+                        vehicles = serializer.Deserialize(openFileDialog1.FileName);
+                        UpdateTable();
+                    }
+                    catch (Exception)
+                    {
+                        MessageBox.Show("The file has been corrupted.");
+                    }
+                }
+            }
         }
     }
 }

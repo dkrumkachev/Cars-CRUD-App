@@ -33,5 +33,10 @@ namespace lab2.Factories.ControlFactories
             }
             return comboBox;
         }
+
+        public override bool CanCreate(Type propertyType)
+        {
+            return propertyType.IsEnum;
+        }
     }
 }

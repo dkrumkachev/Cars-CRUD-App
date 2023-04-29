@@ -18,5 +18,10 @@ namespace lab2.Factories.ControlFactories
         {
             Bind(control, obj, property.Name, "Text");
         }
+
+        public override bool CanCreate(Type propertyType)
+        {
+            return propertyType == typeof(string);
+        }
     }
 }

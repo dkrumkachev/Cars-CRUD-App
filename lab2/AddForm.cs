@@ -1,6 +1,6 @@
 ﻿using lab2.Factories.ControlFactories;
 using lab2.Factories.VehicleFactories;
-using lab2.hierarchy;
+using lab2.vehicles;
 using System.ComponentModel;
 using System.Data;
 using System.Reflection;
@@ -21,19 +21,23 @@ namespace lab2
         private const int ControlWidth = 250;
         private const int ControlHeight = 40;
         private const int Spacing = 20;
-        private static readonly Font ControlFont = new("Segoe UI", 14);
+        private static readonly Font ControlFont = new("Bahnschrift SemiLight", 14);
         private int prevSelected = -1;
         private string buttonText = string.Empty;
         private ErrorProvider errorProvider;
-        public enum Mode { Add, Edit, View };
+        public enum Mode { Add, Edit };
         private Mode mode;
         public Vehicle? Vehicle { get { return selectedVehicle; } }
         private Vehicle? selectedVehicle;
+
         public AddForm(Mode mode, Vehicle? vehicle = null)
         {
             InitializeComponent();
             this.mode = mode;
-            selectedVehicle = vehicle;
+            if (vehicle != null)
+            {
+                selectedVehicle = vehicle.Clone();
+            }
             errorProvider = new ErrorProvider();
             errorProvider.BlinkStyle = ErrorBlinkStyle.NeverBlink;
             foreach (var type in MainForm.VehiclesTypes)
@@ -67,18 +71,10 @@ namespace lab2
             else if (selectedVehicle != null) {
                 label1.Text = "Vehicle type:";
                 buttonText = "Save";
+                Text = "Edit";
                 SelectVehicleTypeInComboBox();
                 List<Control> controls = CreateControls(selectedVehicle);
                 DisplayControls(controls, this, new Point(Spacing, Spacing * 2 + ControlHeight), Spacing);
-                if (mode == Mode.View)
-                {
-                    Text = "View";
-                    DisableControls(this);
-                }
-                else
-                {
-                    Text = "Edit";
-                }
             }
             CenterFormOnScreen();
         }
@@ -96,21 +92,6 @@ namespace lab2
                         vehicleTypeComboBox.SelectedIndex = i;
                         break;
                     }
-                }
-            }
-        }
-
-        private void DisableControls(Control owner)
-        {
-            foreach (Control control in owner.Controls)
-            {
-                if (control is GroupBox)
-                {
-                    DisableControls(control);
-                }
-                else if (control is not Label)
-                {
-                    control.Enabled = false;
                 }
             }
         }
@@ -185,7 +166,7 @@ namespace lab2
                     y += control.Height + spacing;
                 }
             }
-            if (owner is Form && mode != Mode.View)
+            if (owner is Form)
             {
                 DisplayButton(x1, y);
                 y += ControlHeight + spacing;
@@ -195,40 +176,35 @@ namespace lab2
 
         private List<Control> CreateControls(object obj)
         {
+            var factories = new List<ControlFactory> { new ComboBoxFactory(), new CheckBoxFactory(),
+                new TextBoxFactory(), new NumericUpDownFactory(), new GroupBoxFactory()  
+            };
             List<Control> controls = new List<Control>();
             Type type = obj.GetType();
             foreach (var property in type.GetProperties())
             {
                 Type propertyType = property.PropertyType;
-                ControlFactory controlFactory;
                 Control[] subcontrols = Array.Empty<Control>();
-                if (propertyType.IsEnum)
+                ControlFactory? controlFactory = null;
+                foreach (var factory in factories)
                 {
-                    controlFactory = new ComboBoxFactory();
-                }
-                else if (propertyType == typeof(bool))
-                {
-                    controlFactory = new CheckBoxFactory();
-                }
-                else if (propertyType == typeof(string))
-                {
-                    controlFactory = new TextBoxFactory();
-                }
-                else if (propertyType == typeof(int))
-                {
-                    controlFactory = new NumericUpDownFactory();
-                }
-                else
-                {
-                    controlFactory = new GroupBoxFactory();
-                    if (propertyType == typeof(Engine))
+                    if (factory.CanCreate(propertyType))
                     {
-                        subcontrols = CreateControls(((MotorVehicle)obj).Engine).ToArray();
+                        controlFactory = factory;
+                        break;
                     }
-                    else if (propertyType == typeof(Person))
-                    {
-                        subcontrols = CreateControls(((Vehicle)obj).Driver).ToArray();
-                    }
+                }
+                if (controlFactory == null)
+                {
+                    continue;
+                }
+                if (propertyType == typeof(Engine))
+                {
+                    subcontrols = CreateControls(((MotorVehicle)obj).Engine).ToArray();
+                }
+                else if (propertyType == typeof(Person))
+                {
+                    subcontrols = CreateControls(((Vehicle)obj).Driver).ToArray();
                 }
                 var control = controlFactory.CreateControl(property);
                 control.Controls.AddRange(subcontrols);
@@ -260,7 +236,6 @@ namespace lab2
             container.Controls.Add(control);
         }
 
-
         private void Button_Click(object? sender, EventArgs e)
         {
             if (CheckControls(this))
@@ -269,7 +244,6 @@ namespace lab2
                 Close();
             }
         }
-
 
         private bool CheckControls(Control owner)
         {

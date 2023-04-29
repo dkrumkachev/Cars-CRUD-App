@@ -1,4 +1,4 @@
-﻿namespace lab2.hierarchy
+﻿namespace lab2.vehicles
 {
     public class Engine
     {
@@ -19,11 +19,24 @@
             get { return horsepower; } 
             set 
             {
-                if (value > 0 && value < MaxHorsepower)
+                if (value > 0 && value <= MaxHorsepower)
                 {
                     horsepower = value;
                 }
             } 
+        }
+
+        public Engine() { }
+
+        public Engine(int horsepower, FuelTypes fuelType) 
+        {
+            Horsepower = horsepower;
+            FuelType = fuelType;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Engine other && other.FuelType == fuelType && other.Horsepower == horsepower;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using lab2.hierarchy;
+﻿using lab2.vehicles;
 
 namespace lab2.Factories.VehicleFactories
 {

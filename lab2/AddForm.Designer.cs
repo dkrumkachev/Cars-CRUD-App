@@ -60,6 +60,7 @@
             this.ClientSize = new System.Drawing.Size(582, 72);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.vehicleTypeComboBox);
+            this.MaximizeBox = false;
             this.Name = "AddForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Add";

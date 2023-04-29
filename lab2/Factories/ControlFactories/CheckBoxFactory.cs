@@ -18,5 +18,10 @@ namespace lab2.Factories.ControlFactories
         {
             Bind(control, obj, property.Name, "Checked");
         }
+
+        public override bool CanCreate(Type propertyType)
+        {
+            return propertyType == typeof(bool);
+        }
     }
 }

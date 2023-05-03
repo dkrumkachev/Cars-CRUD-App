@@ -10,5 +10,7 @@ namespace lab2.Factories.SerializerFactories
     public abstract class SerializerFactory
     {
         public abstract ISerializer CreateSerializer();
+
+        public abstract string GetExtension();
     }
 }

@@ -13,5 +13,10 @@ namespace lab2.Factories.SerializerFactories
         {
             return new BinarySerializer();
         }
+
+        public override string GetExtension()
+        {
+            return "Binary files|*.bin";
+        }
     }
 }

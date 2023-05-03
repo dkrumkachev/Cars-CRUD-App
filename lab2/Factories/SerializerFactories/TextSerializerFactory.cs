@@ -13,5 +13,10 @@ namespace lab2.Factories.SerializerFactories
         {
             return new TextSerializer();
         }
+
+        public override string GetExtension()
+        {
+            return "Text files|*.txt";
+        }
     }
 }

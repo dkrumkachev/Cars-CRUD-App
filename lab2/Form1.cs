@@ -5,7 +5,8 @@ using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Forms;
-
+using static lab2.MainForm;
+using System.Security.AccessControl;
 
 namespace lab2
 {
@@ -14,22 +15,12 @@ namespace lab2
         private List<Vehicle> vehicles = new List<Vehicle>();
         public static Type[] VehiclesTypes = {};
 
-        public enum SerializationType
-        {
-            [DisplayName("Text files|*.txt")]
-            Text,
-            [DisplayName("XML files|*.xml")]
-            XML,
-            [DisplayName("Binary files|*.bin")]
-            Binary,
-        }
+      
         private string filesFilter = string.Empty;
-        private Dictionary<SerializationType, Type> serializerFactories = new Dictionary<SerializationType, Type>()
+        private List<SerializerFactory> serializerFactories = new List<SerializerFactory>()
         {
-            { SerializationType.Binary, typeof(BinarySerializerFactory) },
-            { SerializationType.XML, typeof(XMLSerializerFactory) },
-            { SerializationType.Text, typeof(TextSerializerFactory) },
-        }; 
+            new BinarySerializerFactory(), new XMLSerializerFactory(), new TextSerializerFactory()
+        };
 
 
         private void HardcodeVehiclesToTable()
@@ -151,19 +142,14 @@ namespace lab2
             UpdateTable();
         }
 
-        private static string GetFilesFilter()
+        private string GetFilesFilter()
         {
             var fileFilter = string.Empty;
-            var serializationTypes = typeof(SerializationType).GetFields();
-            foreach (var serializationType in serializationTypes)
-            {
-                var name = DisplayNameAttribute.GetDisplayName(serializationType);
-                if (name != string.Empty)
-                {
-                    fileFilter += name + "|";
-                }
+            foreach (var factory in serializerFactories)
+            {   
+                fileFilter += factory.GetExtension() + "|";
             }
-            return fileFilter.Remove(fileFilter.Length - 1);    
+            return fileFilter.Remove(fileFilter.Length - 1);
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -171,11 +157,18 @@ namespace lab2
             saveFileDialog1.Filter = filesFilter;
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                var serializationType = (SerializationType)(saveFileDialog1.FilterIndex - 1);
-                var obj = Activator.CreateInstance(serializerFactories[serializationType]);
-                if (obj != null)
+                SerializerFactory? serializerFactory = null;
+                foreach (var factory in serializerFactories)
                 {
-                    var serializerFactory = (SerializerFactory)obj;
+                    if (factory.GetExtension() == saveFileDialog1.Filter)
+                    {
+                        serializerFactory = factory;
+                        break;
+                    }
+                    
+                }
+                if (serializerFactory != null)
+                {
                     ISerializer serializer = serializerFactory.CreateSerializer();
                     serializer.Serialize(saveFileDialog1.FileName, vehicles);
                 }
@@ -187,11 +180,18 @@ namespace lab2
             openFileDialog1.Filter = filesFilter;
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                var serializationType = (SerializationType)(openFileDialog1.FilterIndex - 1);
-                var obj = Activator.CreateInstance(serializerFactories[serializationType]);
-                if (obj != null)
+                SerializerFactory? serializerFactory = null;
+                foreach (var factory in serializerFactories)
                 {
-                    var serializerFactory = (SerializerFactory)obj;
+                    if (factory.GetExtension() == saveFileDialog1.Filter)
+                    {
+                        serializerFactory = factory;
+                        break;
+                    }
+
+                }
+                if (serializerFactory != null)
+                {
                     ISerializer serializer = serializerFactory.CreateSerializer();
                     try
                     {
@@ -200,7 +200,7 @@ namespace lab2
                     }
                     catch (Exception)
                     {
-                        MessageBox.Show("The file has been corrupted.");
+                        MessageBox.Show("The file is not in the correct format.");
                     }
                 }
             }

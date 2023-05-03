@@ -13,5 +13,10 @@ namespace lab2.Factories.SerializerFactories
         {
             return new XMLSerializer();
         }
+
+        public override string GetExtension()
+        {
+            return "XML files|*.xml";
+        }
     }
 }

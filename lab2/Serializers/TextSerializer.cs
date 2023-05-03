@@ -121,7 +121,7 @@ namespace lab2.Serializers
                     throw new FileFormatException();
                 }
                 object propertyValue = reader.Peek() == '"' ? ReadQuotes(reader) : DeserializeObject(reader);
-                SetPropertyValue(ref model, property, propertyValue);
+                SetPropertyValue(model, property, propertyValue);
                 if (reader.Read() != ';')
                 {
                     throw new FileFormatException();
@@ -131,7 +131,7 @@ namespace lab2.Serializers
             return model;
         }
 
-        private void SetPropertyValue(ref object obj, PropertyInfo property, object value)
+        private void SetPropertyValue(object obj, PropertyInfo property, object value)
         {
             if (property.PropertyType == typeof(int))
             {

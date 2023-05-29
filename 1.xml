@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfVehicleSerializableModel xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <VehicleSerializableModel xsi:type="MotorcycleSerializableModel">
+    <Manufacturer>Yamaha</Manufacturer>
+    <Model>YFZ</Model>
+    <Driver>
+      <Name>Ann</Name>
+      <Age>19</Age>
+    </Driver>
+    <Engine>
+      <FuelType>Diesel</FuelType>
+      <Horsepower>290</Horsepower>
+    </Engine>
+    <Type>Sports</Type>
+  </VehicleSerializableModel>
+  <VehicleSerializableModel xsi:type="TruckSerializableModel">
+    <Manufacturer>Scania</Manufacturer>
+    <Model>R420</Model>
+    <Driver>
+      <Name>Dave</Name>
+      <Age>54</Age>
+    </Driver>
+    <Engine>
+      <FuelType>Gasoline</FuelType>
+      <Horsepower>200</Horsepower>
+    </Engine>
+    <MaxWeight>40</MaxWeight>
+    <HasTrailer>true</HasTrailer>
+  </VehicleSerializableModel>
+  <VehicleSerializableModel xsi:type="PassengerCarSerializableModel">
+    <Manufacturer>Tesla</Manufacturer>
+    <Model>Model S</Model>
+    <Driver>
+      <Name>Alice</Name>
+      <Age>24</Age>
+    </Driver>
+    <Engine>
+      <FuelType>Electric</FuelType>
+      <Horsepower>670</Horsepower>
+    </Engine>
+    <BodyStyle>Hatchback</BodyStyle>
+    <Drivetrain>RearWheel</Drivetrain>
+    <HasSeatHeating>true</HasSeatHeating>
+  </VehicleSerializableModel>
+</ArrayOfVehicleSerializableModel>

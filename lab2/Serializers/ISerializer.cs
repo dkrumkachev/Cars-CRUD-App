@@ -9,9 +9,9 @@ namespace lab2.Serializers
 {
     public interface ISerializer
     {
-        void Serialize(string filename, List<Vehicle> vehicles);
+        void Serialize(Stream stream, List<Vehicle> vehicles);
 
-        List<Vehicle> Deserialize(string filename);
+        List<Vehicle> Deserialize(Stream stream);
 
     }
 }

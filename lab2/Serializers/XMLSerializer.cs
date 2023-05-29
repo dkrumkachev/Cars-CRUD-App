@@ -14,20 +14,16 @@ namespace lab2.Serializers
 {
     public class XMLSerializer : ISerializer
     {
-        
-
-        public void Serialize(string fileName, List<Vehicle> vehicles)
+        public void Serialize(Stream stream, List<Vehicle> vehicles)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(List<VehicleSerializableModel>));
-            using TextWriter writer = new StreamWriter(fileName);
-            serializer.Serialize(writer, Converter.VehiclesToSerializable(vehicles));
+            serializer.Serialize(stream, Converter.VehiclesToSerializable(vehicles));
         }
 
-        public List<Vehicle> Deserialize(string fileName)
+        public List<Vehicle> Deserialize(Stream stream)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(List<VehicleSerializableModel>));
-            using TextReader reader = new StreamReader(fileName);
-            var deserialized = serializer.Deserialize(reader) ?? new List<VehicleSerializableModel>();
+            var deserialized = serializer.Deserialize(stream) ?? new List<VehicleSerializableModel>();
             return Converter.SerializableToVehicles((List<VehicleSerializableModel>)deserialized);
         }
     }

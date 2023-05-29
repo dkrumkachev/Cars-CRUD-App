@@ -13,18 +13,16 @@ namespace lab2.Serializers
 {
     public class BinarySerializer : ISerializer
     {
-        public void Serialize(string fileName, List<Vehicle> vehicles)
+        public void Serialize(Stream stream, List<Vehicle> vehicles)
         {
             BinaryFormatter formatter = new BinaryFormatter();
-            using FileStream fileStream = new FileStream(fileName, FileMode.Create);
-            formatter.Serialize(fileStream, Converter.VehiclesToSerializable(vehicles));
+            formatter.Serialize(stream, Converter.VehiclesToSerializable(vehicles));
         }
 
-        public List<Vehicle> Deserialize(string fileName)
+        public List<Vehicle> Deserialize(Stream stream)
         {
             BinaryFormatter formatter = new BinaryFormatter();
-            using FileStream fileStream = new FileStream(fileName, FileMode.Open);
-            return Converter.SerializableToVehicles((List<VehicleSerializableModel>)formatter.Deserialize(fileStream));
+            return Converter.SerializableToVehicles((List<VehicleSerializableModel>)formatter.Deserialize(stream));
         }
     }
 }

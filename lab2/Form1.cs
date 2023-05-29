@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Windows.Forms;
 using static lab2.MainForm;
 using System.Security.AccessControl;
+using PluginInterface;
+using System.IO;
 
 namespace lab2
 {
@@ -15,12 +17,12 @@ namespace lab2
         private List<Vehicle> vehicles = new List<Vehicle>();
         public static Type[] VehiclesTypes = {};
 
-      
-        private string filesFilter = string.Empty;
+        private List<string> filesFilter = new();
         private List<SerializerFactory> serializerFactories = new List<SerializerFactory>()
         {
             new BinarySerializerFactory(), new XMLSerializerFactory(), new TextSerializerFactory()
         };
+        private Dictionary<string, IEncodingPlugin> plugins = new();
 
 
         private void HardcodeVehiclesToTable()
@@ -71,7 +73,35 @@ namespace lab2
                 t.IsDefined(typeof(DisplayNameAttribute))).ToArray();
             HardcodeVehiclesToTable();
             FormBorderStyle = FormBorderStyle.FixedSingle;
-            filesFilter = GetFilesFilter();
+            LoadPlugins();
+        }
+
+        private void LoadPlugins()
+        {
+            string currentDirectory = Environment.CurrentDirectory;
+            string path = Directory.GetParent(currentDirectory)?.Parent?.Parent?.Parent?.FullName + "\\Plugins";
+            string[] binDirectories = Directory.GetDirectories(path, "bin", SearchOption.AllDirectories);
+            foreach (string binDirectory in binDirectories)
+            {
+                string[] dllFiles = Directory.GetFiles(binDirectory, "*.dll", SearchOption.AllDirectories);
+                foreach (string pluginFile in dllFiles)
+                {
+                    Assembly pluginAssembly = Assembly.LoadFile(pluginFile);
+                    Type[] types = pluginAssembly.GetExportedTypes();
+                    foreach (Type type in types)
+                    {
+                        if (type.GetInterfaces().Contains(typeof(IEncodingPlugin)) && !type.IsAbstract)
+                        {
+                            object? obj = Activator.CreateInstance(type);
+                            if (obj != null)
+                            {
+                                var plugin = (IEncodingPlugin)obj;
+                                plugins.Add(plugin.Extension, plugin);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void UpdateTable()
@@ -126,7 +156,6 @@ namespace lab2
             }
         }
 
-
         private void removeButton_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("Are you sure you want to delete this item?", 
@@ -142,68 +171,114 @@ namespace lab2
             UpdateTable();
         }
 
-        private string GetFilesFilter()
+        private SerializerFactory? GetSerializerFactory(FileDialog dialog)
         {
-            var fileFilter = string.Empty;
             foreach (var factory in serializerFactories)
-            {   
-                fileFilter += factory.GetExtension() + "|";
+            {
+                if (factory.GetExtension() == filesFilter[dialog.FilterIndex - 1])
+                {
+                    return factory;
+                }
             }
-            return fileFilter.Remove(fileFilter.Length - 1);
+            return null;
+        }
+
+        private List<string> MakeFilesFilter(IEncodingPlugin? plugin)
+        {
+            if (plugin == null)
+            {
+                return serializerFactories.Select(i => i.GetExtension()).ToList();
+            }
+            return serializerFactories.Select(i => i.GetExtension() + plugin.Extension).ToList();
+        }
+
+        private List<string> MakeFilesFilter(IEnumerable<IEncodingPlugin> plugins)
+        {
+            var result = new List<string>();
+            foreach (SerializerFactory factory in serializerFactories)
+            {
+                string filter = factory.GetExtension();
+                var extension = filter[filter.LastIndexOf(".")..];
+                foreach (IEncodingPlugin plugin in plugins)
+                {
+                    filter += $";*{extension}{plugin.Extension}";
+                }
+                result.Add(filter);
+            }
+            return result;
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            saveFileDialog1.Filter = filesFilter;
+            if (!SelectPlugin(out IEncodingPlugin? plugin))
+            {
+                return;
+            }
+            filesFilter = MakeFilesFilter(plugin);
+            saveFileDialog1.Filter = string.Join('|', filesFilter);
+            saveFileDialog1.FileName = string.Empty;
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                SerializerFactory? serializerFactory = null;
-                foreach (var factory in serializerFactories)
+                SerializerFactory serializerFactory = serializerFactories[saveFileDialog1.FilterIndex - 1];
+                ISerializer serializer = serializerFactory.CreateSerializer();
+                using var memoryStream = new MemoryStream();
+                serializer.Serialize(memoryStream, vehicles);
+                memoryStream.Position = 0;
+                using var fileStream = new FileStream(saveFileDialog1.FileName, FileMode.Create);
+                if (plugin != null)
                 {
-                    if (factory.GetExtension() == saveFileDialog1.Filter)
-                    {
-                        serializerFactory = factory;
-                        break;
-                    }
-                    
+                    plugin.Encode(memoryStream, fileStream);
                 }
-                if (serializerFactory != null)
+                else
                 {
-                    ISerializer serializer = serializerFactory.CreateSerializer();
-                    serializer.Serialize(saveFileDialog1.FileName, vehicles);
+                    memoryStream.CopyTo(fileStream);
                 }
             }
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            openFileDialog1.Filter = filesFilter;
+            filesFilter = MakeFilesFilter(plugins.Values);
+            openFileDialog1.Filter = string.Join('|', filesFilter);
+            openFileDialog1.FileName = string.Empty;
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                SerializerFactory? serializerFactory = null;
-                foreach (var factory in serializerFactories)
+                string path = openFileDialog1.FileName;
+                SerializerFactory serializerFactory = serializerFactories[openFileDialog1.FilterIndex - 1];
+                ISerializer serializer = serializerFactory.CreateSerializer();
+                try
                 {
-                    if (factory.GetExtension() == saveFileDialog1.Filter)
+                    using var fileStream = new FileStream(path, FileMode.Open);
+                    using var memoryStream = new MemoryStream();
+                    if (plugins.TryGetValue(Path.GetExtension(path), out IEncodingPlugin? plugin))
                     {
-                        serializerFactory = factory;
-                        break;
+                        plugin.Decode(fileStream, memoryStream);
                     }
-
+                    else
+                    {
+                        fileStream.CopyTo(memoryStream);
+                    }
+                    memoryStream.Position = 0;
+                    vehicles = serializer.Deserialize(memoryStream);
+                    UpdateTable();
                 }
-                if (serializerFactory != null)
+                catch (Exception)
                 {
-                    ISerializer serializer = serializerFactory.CreateSerializer();
-                    try
-                    {
-                        vehicles = serializer.Deserialize(openFileDialog1.FileName);
-                        UpdateTable();
-                    }
-                    catch (Exception)
-                    {
-                        MessageBox.Show("The file is not in the correct format.");
-                    }
+                    MessageBox.Show("The file is not in the correct format.");
                 }
             }
+        }
+
+        private bool SelectPlugin(out IEncodingPlugin? plugin)
+        {
+            plugin = null;
+            var selectionForm = new PluginSelectionForm(plugins.Keys.Select(i => i[1..]).ToList());
+            if (selectionForm.ShowDialog() == DialogResult.Cancel)
+            {
+                return false;
+            }
+            plugins.TryGetValue($".{selectionForm.Selected}", out plugin);
+            return true;
         }
     }
 }

@@ -13,7 +13,7 @@ namespace lab2.Serializers
 {
     public class TextSerializer : ISerializer
     {
-        public void Serialize(string filename, List<Vehicle> vehicles)
+        public void Serialize(Stream stream, List<Vehicle> vehicles)
         {
             var models = Converter.VehiclesToSerializable(vehicles);
             StringBuilder result = new StringBuilder("[");
@@ -22,7 +22,7 @@ namespace lab2.Serializers
                 SerializeObject(result, model);
             }
             result.Append("]");
-            File.WriteAllText(filename, result.ToString());
+            stream.Write(Encoding.UTF8.GetBytes(result.ToString()));
         }
 
         private void SerializeObject(StringBuilder str, object obj)
@@ -54,10 +54,13 @@ namespace lab2.Serializers
             str.Append("}");
         }
 
-        public List<Vehicle> Deserialize(string filename)
+        public List<Vehicle> Deserialize(Stream stream)
         {
             var models = new List<VehicleSerializableModel>();
-            using var reader = new StreamReader(filename);
+            var memoryStream = new MemoryStream();
+            stream.CopyTo(memoryStream);
+            memoryStream.Position = 0;
+            using var reader = new StreamReader(memoryStream);
             if (reader.Read() != '[')
             {
                 throw new FileFormatException();
